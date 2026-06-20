@@ -28,7 +28,7 @@ export default function OrdersPage() {
   const [orderList, setOrderList] = useState<Order[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 

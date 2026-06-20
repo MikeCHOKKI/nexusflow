@@ -14,7 +14,7 @@ function formatCFA(amount: number): string {
 
 export default function PaymentsPage() {
   const [paymentList, setPaymentList] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");

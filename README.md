@@ -99,13 +99,13 @@ Chaque service est autonome, dockerisé, et communique via des protocoles léger
 
 | Service | Langage | Port | Protocole | Rôle |
 |---------|---------|------|-----------|------|
-| **API Gateway** | Go | `:8080` | REST + gRPC | Point d'entrée, auth JWT, rate limiting, routage |
+| **API Gateway** | Go | `:8080` | REST → gRPC | Point d'entrée, auth JWT, routage, événements Redis |
 | **User Service** | Go | `:50051` | gRPC | Auth, CRUD utilisateurs, JWT |
-| **Catalog Service** | Python | `:50052` | gRPC REST | Gestion produits, catégories, stock |
-| **Order Service** | PHP | `:50053` | HTTP | Commandes, workflow, événements Redis |
-| **Payment Service** | Go | `:50054` | gRPC | Stub paiement (Wave, OM, MTN, Visa) |
-| **Notification** | Python | `:50055` | Redis Sub | Emails (MailHog), notifications |
-| **Frontend** | React/TS | `:3000` | HTTP | Dashboard admin, visualisation temps réel |
+| **Catalog Service** | Python | `:50052` | gRPC | Gestion produits, catégories, stock |
+| **Order Service** | PHP | `:50053` | HTTP + Redis Pub | Commandes, workflow, événements Redis |
+| **Payment Service** | Go | `:50054` | gRPC | Stub paiement (Wave, OM, MTN, Visa, Mastercard) |
+| **Notification** | Python | `:50055` | Redis Sub | Emails HTML via MailHog |
+| **Frontend** | React/TS | `:3000` | HTTP REST | Dashboard admin, visualisation temps réel |
 
 ---
 
@@ -172,9 +172,10 @@ make ps
 | **Dashboard Frontend** | [http://localhost:3000](http://localhost:3000) |
 | **API Gateway** | [http://localhost:8080](http://localhost:8080) |
 | **Health Check** | [http://localhost:8080/health](http://localhost:8080/health) |
-| **MailHog (emails)** | [http://localhost:8025](http://localhost:8025) |
-| **PostgreSQL** | `localhost:5432` (nexusflow/nexusflow_dev) |
-| **Redis** | `localhost:6379` |
+| **MailHog (UI)** | [http://localhost:8026](http://localhost:8026) |
+| **MailHog (SMTP)** | `localhost:1026` |
+| **PostgreSQL** | `localhost:5433` (nexusflow/nexusflow_dev) |
+| **Redis** | `localhost:6380` |
 
 ### Arrêter
 
@@ -183,23 +184,41 @@ make down
 # ou : docker compose down -v  # avec suppression volumes
 ```
 
+### Seed Credentials
+
+| Rôle | Email | Mot de passe |
+|------|-------|-------------|
+| **Admin** | `admin@nexusflow.local` | `password123` |
+| **Client** | `client@nexusflow.local` | `password123` |
+
 ### API Endpoints
 
 ```bash
-# Auth
-curl -X POST http://localhost:8080/api/v1/auth/login \
+# ── Auth ─────────────────────────────────────────
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "admin@nexusflow.local", "password": "password123"}'
+  -d '{"email": "admin@nexusflow.local", "password": "password123"}' \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['token'])")
 
-# Produits (avec token)
-curl -H "Authorization: Bearer <token>" \
-  http://localhost:8080/api/v1/products
+# ── Produits ────────────────────────────────────
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/products
 
-# Commandes
-curl -H "Authorization: Bearer <token>" \
-  http://localhost:8080/api/v1/orders
+# ── Commandes ────────────────────────────────────
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/orders
 
-# Santé des services
+# ── Dashboard Stats ──────────────────────────────
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/dashboard/stats
+
+# ── Paiements ────────────────────────────────────
+curl -X POST http://localhost:8080/api/v1/payments \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"order_id":"<order-uuid>","amount":450000,"currency":"XOF","method":"WAVE"}'
+
+# ── Utilisateurs ─────────────────────────────────
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users
+
+# ── Santé des services ───────────────────────────
 curl http://localhost:8080/health
 ```
 

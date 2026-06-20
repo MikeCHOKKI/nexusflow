@@ -87,7 +87,7 @@ export default function DashboardPage() {
     dashboard
       .stats()
       .then((res) => {
-        if (res.data) setStats(res.data);
+        if (res) setStats(res);
       })
       .catch(() => {
         // Use default data on error
