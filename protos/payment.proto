@@ -1,0 +1,66 @@
+syntax = "proto3";
+package nexusflow;
+option go_package = "github.com/MikeCHOKKI/nexusflow/protos/gen/go/nexusflow";
+
+import "common.proto";
+
+// ─── Payment Service ──────────────────────────────────────────
+
+service PaymentService {
+  rpc ProcessPayment(ProcessPaymentRequest) returns (PaymentResponse);
+  rpc GetPayment(GetPaymentRequest) returns (Payment);
+  rpc RefundPayment(RefundPaymentRequest) returns (PaymentResponse);
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  ORANGE_MONEY = 1;
+  MTN_MOMO = 2;
+  WAVE = 3;
+  VISA = 4;
+  MASTERCARD = 5;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_INITIATED = 1;
+  PAYMENT_PROCESSING = 2;
+  PAYMENT_COMPLETED = 3;
+  PAYMENT_FAILED = 4;
+  PAYMENT_REFUNDED = 5;
+}
+
+message Payment {
+  string id = 1;
+  string order_id = 2;
+  string user_id = 3;
+  double amount = 4;
+  string currency = 5;
+  PaymentMethod method = 6;
+  PaymentStatus status = 7;
+  string transaction_ref = 8;
+  Metadata metadata = 15;
+}
+
+message ProcessPaymentRequest {
+  string order_id = 1;
+  string user_id = 2;
+  double amount = 3;
+  string currency = 4;
+  PaymentMethod method = 5;
+}
+
+message PaymentResponse {
+  Payment payment = 1;
+  string message = 2;
+}
+
+message GetPaymentRequest {
+  string id = 1;
+  string order_id = 2;      // optional
+}
+
+message RefundPaymentRequest {
+  string payment_id = 1;
+  string reason = 2;
+}
