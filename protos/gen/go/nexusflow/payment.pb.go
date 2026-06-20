@@ -425,6 +425,118 @@ func (x *GetPaymentRequest) GetOrderId() string {
 	return ""
 }
 
+type ListPaymentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Status        PaymentStatus          `protobuf:"varint,3,opt,name=status,proto3,enum=nexusflow.PaymentStatus" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPaymentsRequest) Reset() {
+	*x = ListPaymentsRequest{}
+	mi := &file_payment_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPaymentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPaymentsRequest) ProtoMessage() {}
+
+func (x *ListPaymentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPaymentsRequest.ProtoReflect.Descriptor instead.
+func (*ListPaymentsRequest) Descriptor() ([]byte, []int) {
+	return file_payment_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListPaymentsRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListPaymentsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListPaymentsRequest) GetStatus() PaymentStatus {
+	if x != nil {
+		return x.Status
+	}
+	return PaymentStatus_PAYMENT_STATUS_UNSPECIFIED
+}
+
+type ListPaymentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Payments      []*Payment             `protobuf:"bytes,1,rep,name=payments,proto3" json:"payments,omitempty"`
+	Pagination    *Pagination            `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPaymentsResponse) Reset() {
+	*x = ListPaymentsResponse{}
+	mi := &file_payment_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPaymentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPaymentsResponse) ProtoMessage() {}
+
+func (x *ListPaymentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPaymentsResponse.ProtoReflect.Descriptor instead.
+func (*ListPaymentsResponse) Descriptor() ([]byte, []int) {
+	return file_payment_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ListPaymentsResponse) GetPayments() []*Payment {
+	if x != nil {
+		return x.Payments
+	}
+	return nil
+}
+
+func (x *ListPaymentsResponse) GetPagination() *Pagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 type RefundPaymentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PaymentId     string                 `protobuf:"bytes,1,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
@@ -435,7 +547,7 @@ type RefundPaymentRequest struct {
 
 func (x *RefundPaymentRequest) Reset() {
 	*x = RefundPaymentRequest{}
-	mi := &file_payment_proto_msgTypes[4]
+	mi := &file_payment_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -447,7 +559,7 @@ func (x *RefundPaymentRequest) String() string {
 func (*RefundPaymentRequest) ProtoMessage() {}
 
 func (x *RefundPaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_payment_proto_msgTypes[4]
+	mi := &file_payment_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -460,7 +572,7 @@ func (x *RefundPaymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefundPaymentRequest.ProtoReflect.Descriptor instead.
 func (*RefundPaymentRequest) Descriptor() ([]byte, []int) {
-	return file_payment_proto_rawDescGZIP(), []int{4}
+	return file_payment_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RefundPaymentRequest) GetPaymentId() string {
@@ -503,7 +615,16 @@ const file_payment_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\">\n" +
 	"\x11GetPaymentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\border_id\x18\x02 \x01(\tR\aorderId\"M\n" +
+	"\border_id\x18\x02 \x01(\tR\aorderId\"q\n" +
+	"\x13ListPaymentsRequest\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x120\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x18.nexusflow.PaymentStatusR\x06status\"}\n" +
+	"\x14ListPaymentsResponse\x12.\n" +
+	"\bpayments\x18\x01 \x03(\v2\x12.nexusflow.PaymentR\bpayments\x125\n" +
+	"\n" +
+	"pagination\x18\x02 \x01(\v2\x15.nexusflow.PaginationR\n" +
+	"pagination\"M\n" +
 	"\x14RefundPaymentRequest\x12\x1d\n" +
 	"\n" +
 	"payment_id\x18\x01 \x01(\tR\tpaymentId\x12\x16\n" +
@@ -522,11 +643,12 @@ const file_payment_proto_rawDesc = "" +
 	"\x12PAYMENT_PROCESSING\x10\x02\x12\x15\n" +
 	"\x11PAYMENT_COMPLETED\x10\x03\x12\x12\n" +
 	"\x0ePAYMENT_FAILED\x10\x04\x12\x14\n" +
-	"\x10PAYMENT_REFUNDED\x10\x052\xee\x01\n" +
+	"\x10PAYMENT_REFUNDED\x10\x052\xbf\x02\n" +
 	"\x0ePaymentService\x12N\n" +
 	"\x0eProcessPayment\x12 .nexusflow.ProcessPaymentRequest\x1a\x1a.nexusflow.PaymentResponse\x12>\n" +
 	"\n" +
-	"GetPayment\x12\x1c.nexusflow.GetPaymentRequest\x1a\x12.nexusflow.Payment\x12L\n" +
+	"GetPayment\x12\x1c.nexusflow.GetPaymentRequest\x1a\x12.nexusflow.Payment\x12O\n" +
+	"\fListPayments\x12\x1e.nexusflow.ListPaymentsRequest\x1a\x1f.nexusflow.ListPaymentsResponse\x12L\n" +
 	"\rRefundPayment\x12\x1f.nexusflow.RefundPaymentRequest\x1a\x1a.nexusflow.PaymentResponseB9Z7github.com/MikeCHOKKI/nexusflow/protos/gen/go/nexusflowb\x06proto3"
 
 var (
@@ -542,7 +664,7 @@ func file_payment_proto_rawDescGZIP() []byte {
 }
 
 var file_payment_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_payment_proto_goTypes = []any{
 	(PaymentMethod)(0),            // 0: nexusflow.PaymentMethod
 	(PaymentStatus)(0),            // 1: nexusflow.PaymentStatus
@@ -550,26 +672,34 @@ var file_payment_proto_goTypes = []any{
 	(*ProcessPaymentRequest)(nil), // 3: nexusflow.ProcessPaymentRequest
 	(*PaymentResponse)(nil),       // 4: nexusflow.PaymentResponse
 	(*GetPaymentRequest)(nil),     // 5: nexusflow.GetPaymentRequest
-	(*RefundPaymentRequest)(nil),  // 6: nexusflow.RefundPaymentRequest
-	(*Metadata)(nil),              // 7: nexusflow.Metadata
+	(*ListPaymentsRequest)(nil),   // 6: nexusflow.ListPaymentsRequest
+	(*ListPaymentsResponse)(nil),  // 7: nexusflow.ListPaymentsResponse
+	(*RefundPaymentRequest)(nil),  // 8: nexusflow.RefundPaymentRequest
+	(*Metadata)(nil),              // 9: nexusflow.Metadata
+	(*Pagination)(nil),            // 10: nexusflow.Pagination
 }
 var file_payment_proto_depIdxs = []int32{
-	0, // 0: nexusflow.Payment.method:type_name -> nexusflow.PaymentMethod
-	1, // 1: nexusflow.Payment.status:type_name -> nexusflow.PaymentStatus
-	7, // 2: nexusflow.Payment.metadata:type_name -> nexusflow.Metadata
-	0, // 3: nexusflow.ProcessPaymentRequest.method:type_name -> nexusflow.PaymentMethod
-	2, // 4: nexusflow.PaymentResponse.payment:type_name -> nexusflow.Payment
-	3, // 5: nexusflow.PaymentService.ProcessPayment:input_type -> nexusflow.ProcessPaymentRequest
-	5, // 6: nexusflow.PaymentService.GetPayment:input_type -> nexusflow.GetPaymentRequest
-	6, // 7: nexusflow.PaymentService.RefundPayment:input_type -> nexusflow.RefundPaymentRequest
-	4, // 8: nexusflow.PaymentService.ProcessPayment:output_type -> nexusflow.PaymentResponse
-	2, // 9: nexusflow.PaymentService.GetPayment:output_type -> nexusflow.Payment
-	4, // 10: nexusflow.PaymentService.RefundPayment:output_type -> nexusflow.PaymentResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	0,  // 0: nexusflow.Payment.method:type_name -> nexusflow.PaymentMethod
+	1,  // 1: nexusflow.Payment.status:type_name -> nexusflow.PaymentStatus
+	9,  // 2: nexusflow.Payment.metadata:type_name -> nexusflow.Metadata
+	0,  // 3: nexusflow.ProcessPaymentRequest.method:type_name -> nexusflow.PaymentMethod
+	2,  // 4: nexusflow.PaymentResponse.payment:type_name -> nexusflow.Payment
+	1,  // 5: nexusflow.ListPaymentsRequest.status:type_name -> nexusflow.PaymentStatus
+	2,  // 6: nexusflow.ListPaymentsResponse.payments:type_name -> nexusflow.Payment
+	10, // 7: nexusflow.ListPaymentsResponse.pagination:type_name -> nexusflow.Pagination
+	3,  // 8: nexusflow.PaymentService.ProcessPayment:input_type -> nexusflow.ProcessPaymentRequest
+	5,  // 9: nexusflow.PaymentService.GetPayment:input_type -> nexusflow.GetPaymentRequest
+	6,  // 10: nexusflow.PaymentService.ListPayments:input_type -> nexusflow.ListPaymentsRequest
+	8,  // 11: nexusflow.PaymentService.RefundPayment:input_type -> nexusflow.RefundPaymentRequest
+	4,  // 12: nexusflow.PaymentService.ProcessPayment:output_type -> nexusflow.PaymentResponse
+	2,  // 13: nexusflow.PaymentService.GetPayment:output_type -> nexusflow.Payment
+	7,  // 14: nexusflow.PaymentService.ListPayments:output_type -> nexusflow.ListPaymentsResponse
+	4,  // 15: nexusflow.PaymentService.RefundPayment:output_type -> nexusflow.PaymentResponse
+	12, // [12:16] is the sub-list for method output_type
+	8,  // [8:12] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_payment_proto_init() }
@@ -584,7 +714,7 @@ func file_payment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_proto_rawDesc), len(file_payment_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

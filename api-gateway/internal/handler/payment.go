@@ -109,6 +109,30 @@ func (h *PaymentHandler) GetPayment(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, http.StatusOK, payment)
 }
 
+// GET /api/v1/payments
+func (h *PaymentHandler) ListPayments(w http.ResponseWriter, r *http.Request) {
+	page := parseInt(r.URL.Query().Get("page"), 1)
+	limit := parseInt(r.URL.Query().Get("limit"), 20)
+	statusStr := r.URL.Query().Get("status")
+
+	var status pb.PaymentStatus
+	if s, ok := pb.PaymentStatus_value[statusStr]; ok {
+		status = pb.PaymentStatus(s)
+	}
+
+	resp, err := h.clients.Payment.ListPayments(r.Context(), &pb.ListPaymentsRequest{
+		Page:   int32(page),
+		Limit:  int32(limit),
+		Status: status,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list payments: "+err.Error())
+		return
+	}
+
+	writeSuccess(w, http.StatusOK, resp)
+}
+
 // POST /api/v1/payments/{id}/refund
 func (h *PaymentHandler) RefundPayment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]

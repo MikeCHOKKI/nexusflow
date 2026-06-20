@@ -88,6 +88,48 @@ func (s *PaymentServer) GetPayment(
 	return p.ToProto(), nil
 }
 
+// ListPayments returns a paginated list of payments.
+func (s *PaymentServer) ListPayments(
+	ctx context.Context,
+	req *nexusflow.ListPaymentsRequest,
+) (*nexusflow.ListPaymentsResponse, error) {
+	page := int(req.GetPage())
+	if page < 1 {
+		page = 1
+	}
+	limit := int(req.GetLimit())
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	statusFilter := model.PaymentStatus(-1)
+	if req.GetStatus() != nexusflow.PaymentStatus_PAYMENT_STATUS_UNSPECIFIED {
+		statusFilter = model.PaymentStatus(req.GetStatus())
+	}
+
+	payments, total, err := s.provider.ListPayments(ctx, page, limit, statusFilter)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list payments: %v", err)
+	}
+
+	protos := make([]*nexusflow.Payment, 0, len(payments))
+	for _, p := range payments {
+		protos = append(protos, p.ToProto())
+	}
+
+	totalPages := (total + limit - 1) / limit
+
+	return &nexusflow.ListPaymentsResponse{
+		Payments: protos,
+		Pagination: &nexusflow.Pagination{
+			Total:      int32(total),
+			Page:       int32(page),
+			Limit:      int32(limit),
+			TotalPages: int32(totalPages),
+		},
+	}, nil
+}
+
 // RefundPayment processes a refund for an existing payment.
 func (s *PaymentServer) RefundPayment(
 	ctx context.Context,

@@ -9,6 +9,7 @@ import "common.proto";
 service PaymentService {
   rpc ProcessPayment(ProcessPaymentRequest) returns (PaymentResponse);
   rpc GetPayment(GetPaymentRequest) returns (Payment);
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
   rpc RefundPayment(RefundPaymentRequest) returns (PaymentResponse);
 }
 
@@ -58,6 +59,17 @@ message PaymentResponse {
 message GetPaymentRequest {
   string id = 1;
   string order_id = 2;      // optional
+}
+
+message ListPaymentsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  PaymentStatus status = 3;
+}
+
+message ListPaymentsResponse {
+  repeated Payment payments = 1;
+  Pagination pagination = 2;
 }
 
 message RefundPaymentRequest {

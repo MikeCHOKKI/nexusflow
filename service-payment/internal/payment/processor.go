@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
@@ -112,6 +113,54 @@ func (sp *StubProvider) GetPayment(ctx context.Context, id string) (*model.Payme
 		return nil, fmt.Errorf("payment %s not found", id)
 	}
 	return p, nil
+}
+
+// ListPayments returns all stored payments (paginated).
+func (sp *StubProvider) ListPayments(ctx context.Context, page, limit int, statusFilter model.PaymentStatus) ([]*model.Payment, int, error) {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
+
+	// Collect all payments from in-memory store
+	var all []*model.Payment
+	for _, p := range sp.payments {
+		all = append(all, p)
+	}
+
+	// Sort by created_at descending
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].CreatedAt.After(all[j].CreatedAt)
+	})
+
+	// Apply status filter if specified
+	if statusFilter >= 0 {
+		var filtered []*model.Payment
+		for _, p := range all {
+			if p.Status == statusFilter {
+				filtered = append(filtered, p)
+			}
+		}
+		all = filtered
+	}
+
+	total := len(all)
+
+	// Paginate
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	start := (page - 1) * limit
+	if start >= total {
+		return []*model.Payment{}, total, nil
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+
+	return all[start:end], total, nil
 }
 
 // RefundPayment marks an existing payment as refunded.

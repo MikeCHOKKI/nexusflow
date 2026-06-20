@@ -11,6 +11,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// unwrapPHPResponse extracts the "data" field from a PHP service response
+// (which wraps everything in {"success":true, "data": ...}) to avoid double-wrapping
+// when the gateway adds its own envelope via writeJSON/writeSuccess.
+func unwrapPHPResponse(result map[string]interface{}) interface{} {
+	if data, ok := result["data"]; ok {
+		return data
+	}
+	return result
+}
+
 // OrderHandler exposes order endpoints over REST (Order Service is PHP/HTTP).
 type OrderHandler struct {
 	orderAddr string
@@ -55,7 +65,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeError(w, resp.StatusCode, fmt.Sprintf("order service error: %v", result))
 		return
 	}
-	writeJSON(w, resp.StatusCode, result)
+	writeSuccess(w, resp.StatusCode, unwrapPHPResponse(result))
 }
 
 // GET /api/v1/orders
@@ -78,7 +88,7 @@ func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 
 	var result map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)
-	writeJSON(w, resp.StatusCode, result)
+	writeSuccess(w, resp.StatusCode, unwrapPHPResponse(result))
 }
 
 // GET /api/v1/orders/{id}
@@ -96,7 +106,7 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
 
 	var result map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)
-	writeJSON(w, resp.StatusCode, result)
+	writeSuccess(w, resp.StatusCode, unwrapPHPResponse(result))
 }
 
 // PUT /api/v1/orders/{id}/status
@@ -124,5 +134,5 @@ func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 
 	var result map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)
-	writeJSON(w, resp.StatusCode, result)
+	writeSuccess(w, resp.StatusCode, unwrapPHPResponse(result))
 }
