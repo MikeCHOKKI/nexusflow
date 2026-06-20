@@ -99,6 +99,7 @@ services:
       - "50053:50053"
     environment:
       APP_PORT: "50053"
+      APP_DEBUG: "true"
       DATABASE_URL: postgresql://${POSTGRES_USER:-nexusflow}:${POSTGRES_PASSWORD:-nexusflow_dev}@postgres:5432/${POSTGRES_DB:-nexusflow}
       REDIS_URL: redis://redis:6379
       PAYMENT_SERVICE_ADDR: "service-payment:50054"
@@ -130,7 +131,7 @@ services:
       - "50055:50055"
     environment:
       SMTP_HOST: mailhog
-      SMTP_PORT: "${SMTP_PORT:-1026}"
+      SMTP_PORT: "${SMTP_PORT:-1025}"
       SMTP_FROM: ${SMTP_FROM:-noreply@nexusflow.local}
       REDIS_URL: redis://redis:6379
     depends_on:

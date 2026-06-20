@@ -25,7 +25,16 @@ async def handle_order_created(data: dict) -> None:
         logger.warning("Aucun email client, notification ignorée")
         return
 
-    body = format_email("order_confirmation", data)
+    # Mapper les clés du PHP Order Service vers le template
+    email_data = {
+        **data,
+        "total": data.get("total_amount", data.get("total", "0.00")),
+        "customer_name": customer_name,
+        "customer_email": customer_email,
+        "items": data.get("items", []),
+    }
+
+    body = format_email("order_confirmation", email_data)
     await send_email(
         to=customer_email,
         subject=f"Commande #{data.get('order_id', '?')} confirmée",

@@ -63,8 +63,14 @@ class Router
 
         validate_required($body, ['user_id', 'items', 'currency', 'shipping_address']);
 
+        $customerEmail = $body['customer_email'] ?? '';
+
+        $customerName = $body['customer_name'] ?? 'Client';
+
         $result = $this->service->createOrder(
             userId:          $body['user_id'],
+            customerEmail:   $customerEmail,
+            customerName:    $customerName,
             items:           $body['items'],
             currency:        $body['currency'],
             shippingAddress: $body['shipping_address'],

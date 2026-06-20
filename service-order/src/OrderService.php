@@ -29,13 +29,15 @@ class OrderService
      * Crée une commande avec ses items et calcule les totaux.
      *
      * @param string $userId           UUID du client
+     * @param string $customerEmail    Email du client (pour notification)
+     * @param string $customerName     Nom du client (pour email)
      * @param array  $items            [{product_id, product_name, quantity, unit_price}, ...]
      * @param string $currency         Code devise (XOF, EUR, USD...)
      * @param string $shippingAddress  Adresse de livraison
      *
      * @return array Données de la commande créée
      */
-    public function createOrder(string $userId, array $items, string $currency, string $shippingAddress): array
+    public function createOrder(string $userId, string $customerEmail, string $customerName, array $items, string $currency, string $shippingAddress): array
     {
         // Valider les items
         if (empty($items)) {
@@ -107,7 +109,7 @@ class OrderService
             $this->db->commit();
 
             // Publier événement
-            $this->pubSub->orderCreated($orderId, $userId, $totalAmount, $currency);
+            $this->pubSub->orderCreated($orderId, $userId, $customerEmail, $totalAmount, $currency, $customerName);
 
             return [
                 'id'               => $orderId,
@@ -339,8 +341,8 @@ class OrderService
         $itemStmt->execute(['order_id' => $id]);
         $order['items'] = $itemStmt->fetchAll();
 
-        // Publier événement
-        $this->pubSub->orderStatusChanged($id, $userId, $oldStatus, $status);
+        // Publier événement (customer_email inconnu pour l'instant)
+        $this->pubSub->orderStatusChanged($id, $userId, '', $oldStatus, $status);
 
         return $order;
     }

@@ -27,6 +27,7 @@ func (h *OrderHandler) restURL(path string) string {
 // POST /api/v1/orders
 func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
+	userEmail := middleware.UserEmailFromContext(r.Context())
 
 	body := map[string]interface{}{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -34,6 +35,11 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body["user_id"] = userID
+	body["customer_email"] = userEmail
+	// customer_name optionnel — le mail l'utilise s'il est fourni
+	if name, ok := body["customer_name"]; !ok || name == "" {
+		body["customer_name"] = "Client"
+	}
 
 	data, _ := json.Marshal(body)
 	resp, err := http.Post(h.restURL("/orders"), "application/json", bytes.NewReader(data))

@@ -46,8 +46,10 @@ async def send_email(to: str, subject: str, body: str) -> bool:
         return True
     except Exception as exc:
         logger.error(
-            "Échec envoi email",
-            extra={"to": to, "subject": subject, "error": str(exc)},
+            "Échec envoi email vers %s (sujet: %s) : %s",
+            to,
+            subject,
+            str(exc),
         )
         return False
 
