@@ -26,11 +26,13 @@ func newRouter(clients *client.Clients, rdb *redis.Client) *mux.Router {
 	catalogH := handler.NewCatalogHandler(clients)
 	orderH := handler.NewOrderHandler("service-order:50053")
 	paymentH := handler.NewPaymentHandler(clients)
+	dashboardH := handler.NewDashboardHandler(clients, clients.Conns, "service-order:50053")
 
 	// ── Routes ─────────────────────────────────────────────────
 
 	// Health — no auth required.
 	r.HandleFunc("/health", healthH.Check).Methods(http.MethodGet, http.MethodOptions)
+	r.HandleFunc("/api/v1/health", healthH.Check).Methods(http.MethodGet, http.MethodOptions)
 
 	// Auth — public.
 	auth := r.PathPrefix("/api/v1/auth").Subrouter()
@@ -61,6 +63,9 @@ func newRouter(clients *client.Clients, rdb *redis.Client) *mux.Router {
 	protected.HandleFunc("/payments", paymentH.ProcessPayment).Methods(http.MethodPost)
 	protected.HandleFunc("/payments/{id}", paymentH.GetPayment).Methods(http.MethodGet)
 	protected.HandleFunc("/payments/{id}/refund", paymentH.RefundPayment).Methods(http.MethodPost)
+
+	// Dashboard
+	protected.HandleFunc("/dashboard/stats", dashboardH.Stats).Methods(http.MethodGet)
 
 	return r
 }

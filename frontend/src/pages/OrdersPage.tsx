@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Eye } from "@phosphor-icons/react";
 import DataTable, { type Column } from "../components/ui/DataTable";
 import StatusBadge from "../components/ui/StatusBadge";
@@ -9,16 +9,6 @@ import { orders as ordersApi } from "../lib/api";
 
 const statusFilters: (OrderStatus | "")[] = [
   "", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
-];
-
-const defaultOrders: Order[] = [
-  { id: "CMD-001", userId: "1", userName: "Fatou Diallo", items: [{ productId: "P1", productName: "Smartphone X200", quantity: 1, unitPrice: 450000 }], total: 450000, status: "delivered", paymentMethod: "wave", shippingAddress: "Dakar, Sénégal", createdAt: "2026-06-19T14:30:00Z", updatedAt: "2026-06-19T14:30:00Z" },
-  { id: "CMD-002", userId: "2", userName: "Mamadou Ndiaye", items: [{ productId: "P2", productName: "Casque Bluetooth Pro", quantity: 2, unitPrice: 85000 }], total: 170000, status: "shipped", paymentMethod: "orange_money", shippingAddress: "Thiès, Sénégal", createdAt: "2026-06-19T12:15:00Z", updatedAt: "2026-06-19T12:15:00Z" },
-  { id: "CMD-003", userId: "3", userName: "Aïcha Ba", items: [{ productId: "P4", productName: "Robot Aspirateur", quantity: 1, unitPrice: 295000 }], total: 295000, status: "processing", paymentMethod: "visa", shippingAddress: "Saint-Louis, Sénégal", createdAt: "2026-06-19T10:00:00Z", updatedAt: "2026-06-19T10:00:00Z" },
-  { id: "CMD-004", userId: "4", userName: "Oumar Fall", items: [{ productId: "P5", productName: "Huile d'Olive Bio 1L", quantity: 10, unitPrice: 8500 }], total: 85000, status: "pending", paymentMethod: "mtn_money", shippingAddress: "Dakar, Sénégal", createdAt: "2026-06-19T09:45:00Z", updatedAt: "2026-06-19T09:45:00Z" },
-  { id: "CMD-005", userId: "5", userName: "Khadija Sow", items: [{ productId: "P6", productName: "Montre Connectée S3", quantity: 1, unitPrice: 175000 }], total: 175000, status: "delivered", paymentMethod: "wave", shippingAddress: "Touba, Sénégal", createdAt: "2026-06-18T16:20:00Z", updatedAt: "2026-06-18T16:20:00Z" },
-  { id: "CMD-006", userId: "1", userName: "Fatou Diallo", items: [{ productId: "P7", productName: "Sac à Main Cuir", quantity: 1, unitPrice: 95000 }], total: 95000, status: "cancelled", paymentMethod: "visa", shippingAddress: "Dakar, Sénégal", createdAt: "2026-06-18T14:00:00Z", updatedAt: "2026-06-18T14:00:00Z" },
-  { id: "CMD-007", userId: "6", userName: "Ibrahima Gueye", items: [{ productId: "P10", productName: "Ballon de Foot Pro", quantity: 3, unitPrice: 32000 }], total: 96000, status: "pending", paymentMethod: "orange_money", shippingAddress: "Ziguinchor, Sénégal", createdAt: "2026-06-18T11:30:00Z", updatedAt: "2026-06-18T11:30:00Z" },
 ];
 
 const statusLabels: Record<OrderStatus, string> = {
@@ -35,11 +25,24 @@ function formatCFA(amount: number): string {
 }
 
 export default function OrdersPage() {
-  const [orderList, setOrderList] = useState<Order[]>(defaultOrders);
+  const [orderList, setOrderList] = useState<Order[]>([]);
   const [page, setPage] = useState(1);
-  const [totalPages] = useState(2);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    ordersApi
+      .list({ page, status: statusFilter ? (statusFilter as OrderStatus) : undefined })
+      .then((res) => {
+        setOrderList(res.data);
+        setTotalPages(res.totalPages);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [page, statusFilter]);
 
   const handleStatusUpdate = useCallback(
     async (id: string, newStatus: OrderStatus) => {

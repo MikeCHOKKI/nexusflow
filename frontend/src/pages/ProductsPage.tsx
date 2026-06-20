@@ -45,19 +45,6 @@ const columns: Column<Product>[] = [
   },
 ];
 
-const defaultProducts: Product[] = [
-  { id: "PROD-001", name: "Smartphone X200", description: "", price: 450_000, stock: 34, category: "Électronique", status: "active", createdAt: "", updatedAt: "" },
-  { id: "PROD-002", name: "Casque Bluetooth Pro", description: "", price: 85_000, stock: 120, category: "Électronique", status: "active", createdAt: "", updatedAt: "" },
-  { id: "PROD-003", name: "T-shirt Coton Bio", description: "", price: 12_500, stock: 0, category: "Mode", status: "inactive", createdAt: "", updatedAt: "" },
-  { id: "PROD-004", name: "Robot Aspirateur", description: "", price: 295_000, stock: 18, category: "Maison", status: "active", createdAt: "", updatedAt: "" },
-  { id: "PROD-005", name: "Huile d'Olive Bio 1L", description: "", price: 8_500, stock: 250, category: "Alimentation", status: "active", createdAt: "", updatedAt: "" },
-  { id: "PROD-006", name: "Montre Connectée S3", description: "", price: 175_000, stock: 45, category: "Électronique", status: "active", createdAt: "", updatedAt: "" },
-  { id: "PROD-007", name: "Sac à Main Cuir", description: "", price: 95_000, stock: 2, category: "Mode", status: "active", createdAt: "", updatedAt: "" },
-  { id: "PROD-008", name: "Set de Rangement", description: "", price: 22_000, stock: 0, category: "Maison", status: "draft", createdAt: "", updatedAt: "" },
-  { id: "PROD-009", name: "Crème Hydratante Premium", description: "", price: 18_500, stock: 78, category: "Beauté", status: "active", createdAt: "", updatedAt: "" },
-  { id: "PROD-010", name: "Ballon de Foot Pro", description: "", price: 32_000, stock: 56, category: "Sport", status: "active", createdAt: "", updatedAt: "" },
-];
-
 const emptyForm: ProductInput = {
   name: "",
   description: "",
@@ -68,7 +55,7 @@ const emptyForm: ProductInput = {
 };
 
 export default function ProductsPage() {
-  const [productList, setProductList] = useState<Product[]>(defaultProducts);
+  const [productList, setProductList] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages] = useState(3);
   const [search, setSearch] = useState("");
@@ -82,7 +69,7 @@ export default function ProductsPage() {
     productsApi
       .list({ page, search })
       .then((res) => {
-        if (res.data.length > 0) setProductList(res.data);
+        setProductList(res.data);
       })
       .catch(() => {})
       .finally(() => setLoading(false));

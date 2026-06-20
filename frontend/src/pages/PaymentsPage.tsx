@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ArrowsClockwise } from "@phosphor-icons/react";
 import DataTable, { type Column } from "../components/ui/DataTable";
 import StatusBadge from "../components/ui/StatusBadge";
@@ -8,28 +8,30 @@ import { payments as paymentsApi } from "../lib/api";
 
 const statusFilters: (PaymentStatus | "")[] = ["", "completed", "pending", "failed", "refunded"];
 
-const defaultPayments: Payment[] = [
-  { id: "PAY-001", orderId: "CMD-001", userId: "1", amount: 450000, method: "wave", status: "completed", transactionRef: "WAV-6A3F2B", createdAt: "2026-06-19T14:31:00Z", updatedAt: "2026-06-19T14:31:00Z" },
-  { id: "PAY-002", orderId: "CMD-002", userId: "2", amount: 170000, method: "orange_money", status: "completed", transactionRef: "OM-8D1E4C", createdAt: "2026-06-19T12:16:00Z", updatedAt: "2026-06-19T12:16:00Z" },
-  { id: "PAY-003", orderId: "CMD-003", userId: "3", amount: 295000, method: "visa", status: "completed", transactionRef: "VISA-4F7A2E", createdAt: "2026-06-19T10:01:00Z", updatedAt: "2026-06-19T10:01:00Z" },
-  { id: "PAY-004", orderId: "CMD-004", userId: "4", amount: 85000, method: "mtn_money", status: "pending", transactionRef: "MTN-2B5C8D", createdAt: "2026-06-19T09:46:00Z", updatedAt: "2026-06-19T09:46:00Z" },
-  { id: "PAY-005", orderId: "CMD-005", userId: "5", amount: 175000, method: "wave", status: "completed", transactionRef: "WAV-1E3F7A", createdAt: "2026-06-18T16:21:00Z", updatedAt: "2026-06-18T16:21:00Z" },
-  { id: "PAY-006", orderId: "CMD-006", userId: "1", amount: 95000, method: "visa", status: "refunded", transactionRef: "VISA-9C4D2B", createdAt: "2026-06-18T14:01:00Z", updatedAt: "2026-06-19T08:00:00Z" },
-  { id: "PAY-007", orderId: "CMD-007", userId: "6", amount: 96000, method: "orange_money", status: "failed", transactionRef: "OM-5E8A1F", createdAt: "2026-06-18T11:31:00Z", updatedAt: "2026-06-18T11:31:00Z" },
-  { id: "PAY-008", orderId: "CMD-002", userId: "2", amount: 45000, method: "wave", status: "completed", transactionRef: "WAV-7D2E4B", createdAt: "2026-06-18T09:15:00Z", updatedAt: "2026-06-18T09:15:00Z" },
-];
-
 function formatCFA(amount: number): string {
   return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
 }
 
 export default function PaymentsPage() {
-  const [paymentList, setPaymentList] = useState<Payment[]>(defaultPayments);
+  const [paymentList, setPaymentList] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages] = useState(2);
+  const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [refunding, setRefunding] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    paymentsApi
+      .list({ page, status: statusFilter ? (statusFilter as PaymentStatus) : undefined })
+      .then((res) => {
+        setPaymentList(res.data);
+        setTotalPages(res.totalPages);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [page, statusFilter]);
 
   const handleRefund = useCallback(async (id: string) => {
     setRefunding(true);
