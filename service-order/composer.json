@@ -1,0 +1,24 @@
+{
+    "name": "nexusflow/service-order",
+    "description": "NexusFlow Order Service — microservice de gestion des commandes",
+    "type": "project",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "NexusFlow\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "require": {
+        "php": ">=8.1",
+        "grpc/grpc": "^1.57",
+        "predis/predis": "^2.2",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
