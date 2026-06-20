@@ -1,0 +1,153 @@
+services:
+  # ─── Infrastructure ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexusflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexusflow_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-nexusflow}
+    ports:
+      - "${PG_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexusflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8026:8025"
+      - "1026:1025"
+
+  # ─── Services ────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      GATEWAY_PORT: "8080"
+      USER_SERVICE_ADDR: "service-user:50051"
+      CATALOG_SERVICE_ADDR: "service-catalog:50052"
+      ORDER_SERVICE_ADDR: "service-order:50053"
+      PAYMENT_SERVICE_ADDR: "service-payment:50054"
+      JWT_SECRET: ${JWT_SECRET:-nexusflow-dev-secret}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      service-user:
+        condition: service_started
+      service-catalog:
+        condition: service_started
+      service-order:
+        condition: service_started
+
+  service-user:
+    build:
+      context: .
+      dockerfile: service-user/Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      GRPC_PORT: "50051"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexusflow}:${POSTGRES_PASSWORD:-nexusflow_dev}@postgres:5432/${POSTGRES_DB:-nexusflow}
+      JWT_SECRET: ${JWT_SECRET:-nexusflow-dev-secret}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  service-catalog:
+    build:
+      context: .
+      dockerfile: service-catalog/Dockerfile
+    ports:
+      - "50052:50052"
+    environment:
+      GRPC_PORT: "50052"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexusflow}:${POSTGRES_PASSWORD:-nexusflow_dev}@postgres:5432/${POSTGRES_DB:-nexusflow}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  service-order:
+    build:
+      context: .
+      dockerfile: service-order/Dockerfile
+    ports:
+      - "50053:50053"
+    environment:
+      APP_PORT: "50053"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexusflow}:${POSTGRES_PASSWORD:-nexusflow_dev}@postgres:5432/${POSTGRES_DB:-nexusflow}
+      REDIS_URL: redis://redis:6379
+      PAYMENT_SERVICE_ADDR: "service-payment:50054"
+      NOTIFY_CHANNEL: "nexusflow:notifications"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  service-payment:
+    build:
+      context: .
+      dockerfile: service-payment/Dockerfile
+    ports:
+      - "50054:50054"
+    environment:
+      GRPC_PORT: "50054"
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  service-notify:
+    build:
+      context: .
+      dockerfile: service-notify/Dockerfile
+    ports:
+      - "50055:50055"
+    environment:
+      SMTP_HOST: mailhog
+      SMTP_PORT: "${SMTP_PORT:-1026}"
+      SMTP_FROM: ${SMTP_FROM:-noreply@nexusflow.local}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+
+  # ─── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
+volumes:
+  pgdata:
