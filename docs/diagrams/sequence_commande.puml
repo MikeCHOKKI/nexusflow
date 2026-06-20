@@ -1,0 +1,178 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam participant {
+  BorderColor #1A73E8
+  BackgroundColor #E8F0FE
+  FontColor #1A1A1A
+  FontSize 11
+}
+skinparam actor {
+  BorderColor #BF360C
+  BackgroundColor #FBE9E7
+  FontColor #1A1A1A
+}
+skinparam database {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+  FontSize 10
+}
+skinparam queue {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+  FontSize 10
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+  FontSize 10
+}
+skinparam arrow {
+  Color #555555
+  FontSize 10
+}
+skinparam sequence {
+  BoxPadding 10
+  MessageAlignment center
+}
+
+title "🛒 NexusFlow — Passage de Commande Complet\n(Frontend → API Gateway → Order → Payment → Redis → Notify → MailHog)"
+
+actor "Client" as Client #FBE9E7
+participant "Frontend\n(React + Vite)" as FE #BBDEFB
+participant "API Gateway\n(Go :8080)" as GW #4FC3F7
+participant "User Service\n(Go :50051)" as US #81C784
+participant "Catalog Service\n(Python :50052)" as CS #81C784
+participant "Order Service\n(PHP :50053)" as OS #FFB74D
+database "PostgreSQL\n16" as PG #FFCC80
+participant "Payment Service\n(Go :50054)" as PS #81C784
+database "Redis\n7" as RD #CE93D8
+participant "Notify Service\n(Python :50055)" as NS #81C784
+queue "MailHog\n(SMTP :1025)" as MH #EF9A9A
+
+' ═══════════════════════════════════════════════════════════════
+' 1. AUTHENTIFICATION
+' ═══════════════════════════════════════════════════════════════
+== ① Authentification (Login) ==
+
+Client -> FE: 1. Saisie email / mot de passe
+FE -> GW: 2. POST /api/v1/auth/login
+note right of GW: Rate limiting + CORS
+GW -> US: 3. gRPC Login(LoginRequest)
+US -> US: 4. Vérifie bcrypt(password)
+US -> US: 5. Génère token JWT (24h)
+US --> GW: 6. AuthResponse {token, user, expires_at}
+GW --> FE: 7. 200 {token, user}
+FE -> Client: 8. Stocke token → Dashboard
+
+' ═══════════════════════════════════════════════════════════════
+' 2. CONSULTATION CATALOGUE
+' ═══════════════════════════════════════════════════════════════
+== ② Consultation Catalogue ==
+
+Client -> FE: 9. Navigue vers /products
+FE -> GW: 10. GET /api/v1/products
+note right of GW: Auth middleware valide le JWT
+GW -> US: 11. gRPC ValidateToken(token)
+US --> GW: 12. User {id, role, ...}
+GW -> CS: 13. gRPC ListProducts(page, limit)
+CS -> CS: 14. Interroge PostgreSQL
+CS --> GW: 15. ListProductsResponse {products, pagination}
+GW --> FE: 16. 200 [{id, name, price, ...}]
+FE -> Client: 17. Affiche grille produits
+
+' ═══════════════════════════════════════════════════════════════
+' 3. CRÉATION COMMANDE
+' ═══════════════════════════════════════════════════════════════
+== ③ Création Commande ==
+
+Client -> FE: 18. Panier → "Commander"
+FE -> GW: 19. POST /api/v1/orders {items, currency, address}
+note right of GW: JWT extrait user_id du token
+GW -> OS: 20. gRPC CreateOrder(userId, items, currency, address)
+
+OS -> OS: 21. Valide items (non vides)
+OS -> OS: 22. Calcule totaux (qty × unit_price)
+OS -> PG: 23. BEGIN TRANSACTION
+OS -> PG: 24. INSERT INTO orders.orders (user_id, total_amount, ...)
+PG --> OS: 25. id, created_at, updated_at
+OS -> PG: 26. INSERT INTO orders.order_items (order_id, product_id, ...) × N
+PG --> OS: 27. OK
+OS -> PG: 28. COMMIT
+
+OS -> RD: 29. PUBLISH order.created {orderId, userId, amount}
+note right of RD: Canal: nexusflow:notifications
+
+OS --> GW: 30. Order {id, status:"pending", items, ...}
+GW --> FE: 31. 201 {order_id, status, total}
+FE -> Client: 32. "Commande créée" + récapitulatif
+
+' ═══════════════════════════════════════════════════════════════
+' 4. PAIEMENT
+' ═══════════════════════════════════════════════════════════════
+== ④ Traitement Paiement ==
+
+Client -> FE: 33. Choisit mode de paiement → "Payer"
+FE -> GW: 34. POST /api/v1/payments {order_id, method}
+
+GW -> PS: 35. gRPC ProcessPayment(orderId, userId, amount, currency, method)
+PS -> PS: 36. Valide les champs requis
+PS -> PS: 37. Simule délai 50-200ms
+PS -> PS: 38. Tirage aléatoire : 90% succès / 10% échec
+PS -> PS: 39. Génère ref "PROV-{nano}-{rand}"
+PS -> RD: 40. SAVE Payment {id, status, ref...}
+PS --> GW: 41. PaymentResponse {payment, message}
+
+alt Paiement réussi
+  GW --> FE: 42a. 200 {status:"completed", transaction_ref}
+  FE -> Client: 43a. "Paiement accepté ✓"
+  PS -> RD: 44a. PUBLISH payment.received {orderId, paymentId, amount}
+  note right of RD: Canal: nexusflow:notifications
+
+else Paiement échoué
+  GW --> FE: 42b. 402 {status:"failed", message}
+  FE -> Client: 43b. "Paiement refusé ✗"
+  PS -> RD: 44b. PUBLISH payment.failed {orderId, reason}
+  note right of RD: Canal: nexusflow:notifications
+end
+
+' ═══════════════════════════════════════════════════════════════
+' 5. NOTIFICATIONS ASYNCHRONES
+' ═══════════════════════════════════════════════════════════════
+== ⑤ Notification asynchrone (Redis Pub/Sub) ==
+
+RD -> NS: 45. SUBSCRIBE → Message {type, data}
+note right of NS: Boucle d'écoute async
+
+alt type = "order.created"
+  NS -> NS: 46a. Handle: email de confirmation
+  NS -> MH: 47a. SMTP → to:customer@email
+  note right of MH: Sujet: "Commande #X confirmée"
+  MH --> NS: 48a. OK
+
+else type = "payment.received"
+  NS -> NS: 46b. Handle: email de reçu
+  NS -> MH: 47b. SMTP → Reçu de paiement
+  MH --> NS: 48b. OK
+
+else type = "payment.failed"
+  NS -> NS: 46c. Handle: alerte admin + email client
+  NS -> MH: 47c. SMTP → Échec paiement
+  MH --> NS: 48c. OK
+end
+
+' ═══════════════════════════════════════════════════════════════
+' 6. MISE À JOUR STATUT COMMANDE
+' ═══════════════════════════════════════════════════════════════
+== ⑥ Mise à jour statut commande ==
+
+Client -> FE: 49. Vérifie statut commande
+FE -> GW: 50. GET /api/v1/orders/{id}
+GW -> OS: 51. gRPC GetOrder(id, userId)
+OS -> PG: 52. SELECT orders + items
+PG --> OS: 53. {status, items, payment_id, ...}
+OS --> GW: 54. Order {status:"completed", payment_id, ...}
+GW --> FE: 55. 200 {id, status, payment, ...}
+FE -> Client: 56. Affiche "Commande payée ✓"
+
+@enduml

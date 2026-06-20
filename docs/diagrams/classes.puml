@@ -1,0 +1,201 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam class {
+  BorderColor #1A73E8
+  FontColor #1A1A1A
+  FontSize 12
+  HeaderBackgroundColor #1A73E8
+  HeaderFontColor white
+}
+skinparam enum {
+  BorderColor #7B1FA2
+  BackgroundColor #F3E5F5
+  FontSize 11
+}
+skinparam package {
+  BorderColor #BDBDBD
+  BackgroundColor #FAFAFA
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+skinparam arrow {
+  Color #555555
+  FontSize 10
+}
+
+title "📦 NexusFlow — Diagramme de Classes (Entités Principales)"
+
+' ═══════════════════════════════════════════════════════════════
+' USER
+' ═══════════════════════════════════════════════════════════════
+package "Domaine Utilisateur" #E3F2FD {
+  class "User" as User {
+    + id: UUID <<PK>>
+    + email: VARCHAR(255) <<UNIQUE>>
+    + password: VARCHAR(255)  [bcrypt hash]
+    + name: VARCHAR(255)
+    + role: VARCHAR(50)  ["admin" | "customer"]
+    + is_active: BOOLEAN
+    + created_at: TIMESTAMPTZ
+    + updated_at: TIMESTAMPTZ
+    --
+    + Register(email, password, name): AuthResponse
+    + Login(email, password): AuthResponse
+    + ValidateToken(token): User
+    + UpdateUser(id, name, email, is_active): User
+  }
+  note right of User
+    Stocké dans : users.users
+    Service : User Service (Go)
+    Protocole : gRPC :50051
+  end note
+}
+
+' ═══════════════════════════════════════════════════════════════
+' PRODUCT
+' ═══════════════════════════════════════════════════════════════
+package "Domaine Catalogue" #E8F5E9 {
+  class "Product" as Product {
+    + id: UUID <<PK>>
+    + name: VARCHAR(255)
+    + description: TEXT
+    + price: DECIMAL(12,2)
+    + currency: VARCHAR(3)  ["XOF" | "EUR" | "USD"]
+    + category: VARCHAR(100)
+    + stock: INTEGER
+    + image_url: VARCHAR(500)
+    + is_active: BOOLEAN
+    + created_at: TIMESTAMPTZ
+    + updated_at: TIMESTAMPTZ
+    --
+    + CreateProduct(data): Product
+    + GetProduct(id): Product
+    + ListProducts(page, limit, category, search): Product[]
+    + UpdateProduct(id, data): Product
+    + DeleteProduct(id): void
+  }
+  note right of Product
+    Stocké dans : catalog.products
+    Service : Catalog Service (Python)
+    Protocole : gRPC :50052 + REST :8000
+  end note
+}
+
+' ═══════════════════════════════════════════════════════════════
+' ORDER + ORDERITEM
+' ═══════════════════════════════════════════════════════════════
+package "Domaine Commande" #FFF3E0 {
+  enum "OrderStatus" as OrderStatus {
+    PENDING
+    CONFIRMED
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    CANCELLED
+    REFUNDED
+  }
+
+  class "Order" as Order {
+    + id: UUID <<PK>>
+    + user_id: UUID <<FK>>
+    + total_amount: DECIMAL(14,2)
+    + currency: VARCHAR(3)
+    + status: OrderStatus
+    + shipping_address: TEXT
+    + payment_id: UUID
+    + created_at: TIMESTAMPTZ
+    + updated_at: TIMESTAMPTZ
+    --
+    + CreateOrder(userId, items, currency, address): Order
+    + GetOrder(id, userId): Order
+    + ListOrders(page, limit, userId, status): Order[]
+    + UpdateOrderStatus(id, status): Order
+    + GetTotalAmount(): float
+    + AddItem(product): OrderItem
+    + RemoveItem(productId): void
+  }
+
+  class "OrderItem" as OrderItem {
+    + id: UUID <<PK>>
+    + order_id: UUID <<FK>>
+    + product_id: UUID
+    + product_name: VARCHAR(255)
+    + quantity: INTEGER
+    + unit_price: DECIMAL(12,2)
+    + total_price: DECIMAL(12,2)
+    --
+    + GetSubtotal(): float
+  }
+
+  Order "1" *--> "*" OrderItem : contient
+  Order --> OrderStatus : statut
+  note right of Order
+    Stocké dans : orders.orders
+    Items dans : orders.order_items
+    Service : Order Service (PHP)
+    Protocole : gRPC :50053
+    Paiement asynchrone via Redis Pub/Sub
+  end note
+}
+
+' ═══════════════════════════════════════════════════════════════
+' PAYMENT
+' ═══════════════════════════════════════════════════════════════
+package "Domaine Paiement" #F3E5F5 {
+  enum "PaymentMethod" as PaymentMethod {
+    ORANGE_MONEY
+    MTN_MOMO
+    WAVE
+    VISA
+    MASTERCARD
+  }
+
+  enum "PaymentStatus" as PaymentStatus {
+    INITIATED
+    PROCESSING
+    COMPLETED
+    FAILED
+    REFUNDED
+  }
+
+  class "Payment" as Payment {
+    + id: UUID <<PK>>
+    + order_id: UUID <<FK>>
+    + user_id: UUID
+    + amount: DECIMAL(14,2)
+    + currency: VARCHAR(3)
+    + method: PaymentMethod
+    + status: PaymentStatus
+    + transaction_ref: VARCHAR(255)
+    + created_at: TIMESTAMPTZ
+    + updated_at: TIMESTAMPTZ
+    --
+    + ProcessPayment(orderId, userId, amount, currency, method): PaymentResponse
+    + GetPayment(id): Payment
+    + RefundPayment(paymentId, reason): PaymentResponse
+    + ToProto(): proto.Payment
+  }
+
+  Payment --> PaymentMethod : méthode
+  Payment --> PaymentStatus : statut
+  note right of Payment
+    Stocké dans : Redis (Hash)
+    Fallback : mémoire in-memory
+    Service : Payment Service (Go)
+    Protocole : gRPC :50054
+    Stub : 90% succès / 10% échec
+  end note
+}
+
+' ═══════════════════════════════════════════════════════════════
+' RELATIONS ENTRE ENTITÉS
+' ═══════════════════════════════════════════════════════════════
+User "1" --> "0..*" Order : passe commande
+Order "1" --> "0..1" Payment : associé à
+Order "1" --> "0..*" Product : référence
+Payment "1" --> "1" Order : paye
+
+@enduml

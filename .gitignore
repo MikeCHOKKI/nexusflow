@@ -1,0 +1,56 @@
+# ─── NexusFlow .gitignore ──────────────────────────────────
+
+# Environment
+.env
+.env.local
+*.env.local
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Go
+*.test
+*.out
+vendor/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+
+
+
+# Generated
+protos/gen/go/go.sum
+
+# Logs
+*.log

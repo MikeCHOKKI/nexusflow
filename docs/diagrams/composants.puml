@@ -1,0 +1,175 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam component {
+  BackgroundColor #E8F0FE
+  BorderColor #1A73E8
+  FontColor #1A1A1A
+  FontSize 12
+}
+skinparam database {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+  FontSize 11
+}
+skinparam queue {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+skinparam rectangle {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam actor {
+  BackgroundColor #FBE9E7
+  BorderColor #BF360C
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+skinparam package {
+  BorderColor #BDBDBD
+  BackgroundColor #FAFAFA
+}
+skinparam arrow {
+  Color #555555
+  FontColor #555555
+}
+
+title "☰ NexusFlow — Diagramme de Composants"
+
+
+' ═══════════════════════════════════════════════════════════════
+' CLIENTS
+' ═══════════════════════════════════════════════════════════════
+actor "Utilisateur\n(Browser)" as User
+rectangle Frontend [
+  Frontend Dashboard
+  ~~
+  React + Vite + TypeScript
+  Port :80 (Nginx)
+]
+
+' ═══════════════════════════════════════════════════════════════
+' API GATEWAY
+' ═══════════════════════════════════════════════════════════════
+package "Couche API" as APILayer {
+  component "API Gateway" as GW <<Go>> #4FC3F7
+  note right of GW
+    Port: 8080
+    REST → gRPC proxy
+    Auth JWT + Rate Limiting
+    CORS middleware
+  end note
+}
+
+' ═══════════════════════════════════════════════════════════════
+' MICROSERVICES
+' ═══════════════════════════════════════════════════════════════
+package "Microservices" as Services {
+  component "User Service" as US <<Go>> #81C784
+  note right of US
+    gRPC :50051
+    Register / Login
+    GetUser / UpdateUser
+    ValidateToken / ListUsers
+    Bcrypt auth + JWT 24h
+  end note
+
+  component "Catalog Service" as CS <<Python>> #81C784
+  note right of CS
+    gRPC :50052 + REST :8000
+    CRUD Produits
+    FastAPI + asyncpg
+  end note
+
+  component "Order Service" as OS <<PHP>> #81C784
+  note right of OS
+    gRPC :50053 (HTTP/1.1 JSON)
+    Création commandes + items
+    Calcul totaux + Pub/Sub Redis
+  end note
+
+  component "Payment Service" as PS <<Go>> #81C784
+  note right of PS
+    gRPC :50054
+    Stub provider (90% succès)
+    Stockage Redis + in-memory
+    Process / Get / Refund
+  end note
+
+  component "Notify Service" as NS <<Python>> #81C784
+  note right of NS
+    Port :50055
+    Sub Redis Pub/Sub
+    Envoi emails SMTP
+  end note
+}
+
+' ═══════════════════════════════════════════════════════════════
+' DATA STORES & INFRASTRUCTURE
+' ═══════════════════════════════════════════════════════════════
+package "Infrastructure" as Infra {
+  database "PostgreSQL 16" as PG {
+    }
+  note right of PG
+    Schémas isolés :
+    • users.users
+    • catalog.products
+    • orders.orders + order_items
+    • payments.payments
+  end note
+
+  database "Redis 7" as RD {
+    }
+  note right of RD
+    Cache + Pub/Sub
+    Canal: nexusflow:notifications
+    Événements:
+    • order.created
+    • order.status_changed
+    • payment.received
+    • payment.failed
+  end note
+
+  queue "MailHog" as MH {
+    }
+  note right of MH
+    SMTP :1025
+    UI  :8025
+    Capture emails de test
+  end note
+}
+
+
+' ═══════════════════════════════════════════════════════════════
+' RELATIONS
+' ═══════════════════════════════════════════════════════════════
+
+' Clients → Gateway
+User --> Frontend : "Navigation HTTP"
+Frontend --> GW : "REST /api/v1/*"
+
+' Gateway → Services (gRPC)
+GW --> US : "gRPC :50051"
+GW --> CS : "gRPC :50052"
+GW --> OS : "gRPC :50053"
+GW --> PS : "gRPC :50054"
+
+' Services → PostgreSQL
+US --> PG : "SQL (schema users)"
+CS --> PG : "SQL (schema catalog)"
+OS --> PG : "SQL (schema orders)"
+
+' Services → Redis
+US --> RD : "Cache sessions"
+CS --> RD : "Cache catalogue"
+OS --> RD : "Pub/Sub → nexusflow:notifications <<order.created, order.status_changed>>"
+PS --> RD : "Stockage paiements + Pub/Sub"
+NS --> RD : "Sub ← nexusflow:notifications"
+
+' Notify → MailHog
+NS --> MH : "SMTP :1025"
+
+@enduml
