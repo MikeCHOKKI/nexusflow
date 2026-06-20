@@ -79,6 +79,7 @@ async def handle_order_status_changed(data: dict) -> None:
 async def handle_payment_received(data: dict) -> None:
     """Paiement reçu → email de reçu au client."""
     customer_email = data.get("customer_email", "")
+    customer_name = data.get("customer_name", "Client")
     amount = data.get("amount", "0.00")
 
     logger.info(
@@ -86,6 +87,7 @@ async def handle_payment_received(data: dict) -> None:
         extra={
             "order_id": data.get("order_id"),
             "transaction_id": data.get("transaction_id"),
+            "customer": customer_email,
             "amount": amount,
         },
     )
@@ -94,10 +96,16 @@ async def handle_payment_received(data: dict) -> None:
         logger.warning("Aucun email client, notification ignorée")
         return
 
-    body = format_email("payment_receipt", data)
+    email_data = {
+        **data,
+        "customer_name": customer_name,
+        "customer_email": customer_email,
+    }
+
+    body = format_email("payment_receipt", email_data)
     await send_email(
         to=customer_email,
-        subject=f"Reçu de paiement #{data.get('order_id', '?')} — {amount} €",
+        subject=f"Reçu de paiement #{data.get('order_id', '?')} — {amount} FCFA",
         body=body,
     )
 

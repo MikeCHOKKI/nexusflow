@@ -26,6 +26,14 @@ proto: ## Generate protobuf code for all languages
 frontend: ## Install and build frontend
 	cd frontend && npm install && npm run build
 
+migrate: ## Run pending database migrations
+	@for f in db/migrations/*.sql; do \
+		echo "→ Running migration: $$f..."; \
+		docker compose exec -T postgres psql -U nexusflow -d nexusflow -f /$$f 2>/dev/null || \
+		docker compose exec -T postgres psql -U nexusflow -d nexusflow -c "$$(cat $$f)"; \
+	done
+	@echo "✓ Migrations applied"
+
 seed: ## Run database seed
 	docker compose exec postgres psql -U nexusflow -d nexusflow -f /db/seeds/seed.sql
 

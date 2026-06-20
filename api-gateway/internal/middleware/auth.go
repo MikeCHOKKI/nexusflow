@@ -16,6 +16,7 @@ type contextKey string
 const UserIDKey contextKey = "user_id"
 const UserRoleKey contextKey = "user_role"
 const UserEmailKey contextKey = "user_email"
+const UserNameKey contextKey = "user_name"
 
 // Auth returns an HTTP middleware that validates JWT tokens via UserService.
 // It extracts the Bearer token from the Authorization header and calls
@@ -44,6 +45,7 @@ func Auth(clients *client.Clients) func(http.Handler) http.Handler {
 			ctx = context.WithValue(r.Context(), UserIDKey, user.GetId())
 			ctx = context.WithValue(ctx, UserRoleKey, user.GetRole())
 			ctx = context.WithValue(ctx, UserEmailKey, user.GetEmail())
+			ctx = context.WithValue(ctx, UserNameKey, user.GetName())
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -69,6 +71,14 @@ func UserRoleFromContext(ctx context.Context) string {
 func UserEmailFromContext(ctx context.Context) string {
 	if email, ok := ctx.Value(UserEmailKey).(string); ok {
 		return email
+	}
+	return ""
+}
+
+// UserNameFromContext extracts the authenticated user's name from the request context.
+func UserNameFromContext(ctx context.Context) string {
+	if name, ok := ctx.Value(UserNameKey).(string); ok {
+		return name
 	}
 	return ""
 }

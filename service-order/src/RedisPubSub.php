@@ -46,7 +46,7 @@ class RedisPubSub
     /**
      * Publie un événement de création de commande.
      */
-    public function orderCreated(string $orderId, string $userId, string $customerEmail, float $totalAmount, string $currency, string $customerName = 'Client'): void
+    public function orderCreated(string $orderId, string $userId, string $customerEmail, float $totalAmount, string $currency, array $items, string $customerName = 'Client'): void
     {
         $this->publish('order.created', [
             'order_id'       => $orderId,
@@ -55,18 +55,20 @@ class RedisPubSub
             'customer_name'  => $customerName,
             'total_amount'   => $totalAmount,
             'currency'       => $currency,
+            'items'          => $items,
         ]);
     }
 
     /**
      * Publie un événement de changement de statut.
      */
-    public function orderStatusChanged(string $orderId, string $userId, string $customerEmail, string $oldStatus, string $newStatus): void
+    public function orderStatusChanged(string $orderId, string $userId, string $customerEmail, string $customerName, string $oldStatus, string $newStatus): void
     {
         $this->publish('order.status_changed', [
             'order_id'       => $orderId,
             'user_id'        => $userId,
             'customer_email' => $customerEmail,
+            'customer_name'  => $customerName,
             'old_status'     => $oldStatus,
             'new_status'     => $newStatus,
         ]);

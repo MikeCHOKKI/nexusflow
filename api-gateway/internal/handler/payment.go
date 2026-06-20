@@ -2,27 +2,33 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/MikeCHOKKI/nexusflow/api-gateway/internal/client"
 	"github.com/MikeCHOKKI/nexusflow/api-gateway/internal/middleware"
 	pb "github.com/MikeCHOKKI/nexusflow/api-gateway/gen"
 	"github.com/gorilla/mux"
+	"github.com/redis/go-redis/v9"
 )
 
 // PaymentHandler exposes payment endpoints.
 type PaymentHandler struct {
 	clients *client.Clients
+	rdb     *redis.Client
 }
 
-func NewPaymentHandler(clients *client.Clients) *PaymentHandler {
-	return &PaymentHandler{clients: clients}
+func NewPaymentHandler(clients *client.Clients, rdb *redis.Client) *PaymentHandler {
+	return &PaymentHandler{clients: clients, rdb: rdb}
 }
 
 // POST /api/v1/payments
 func (h *PaymentHandler) ProcessPayment(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
+	userEmail := middleware.UserEmailFromContext(r.Context())
 
 	var body struct {
 		OrderID  string  `json:"order_id"`
@@ -51,6 +57,38 @@ func (h *PaymentHandler) ProcessPayment(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "payment failed: "+err.Error())
 		return
+	}
+
+	// Publier un événement payment.received sur Redis pour le Notification Service
+	if resp.GetPayment() != nil {
+		p := resp.GetPayment()
+		userName := middleware.UserNameFromContext(r.Context())
+		eventData := map[string]interface{}{
+			"order_id":        p.OrderId,
+			"payment_id":      p.Id,
+			"user_id":         userID,
+			"customer_email":  userEmail,
+			"customer_name":   userName,
+			"amount":          p.Amount,
+			"currency":        p.Currency,
+			"payment_method":  body.Method,
+			"transaction_id":  p.TransactionRef,
+			"status":          p.Status.String(),
+		}
+
+		payload := map[string]interface{}{
+			"type":      "payment.received",
+			"data":      eventData,
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		}
+
+		payloadJSON, _ := json.Marshal(payload)
+		channel := "nexusflow:notifications"
+
+		if err := h.rdb.Publish(context.Background(), channel, payloadJSON).Err(); err != nil {
+			// Non-bloquant : on logge l'erreur mais on ne bloque pas la réponse
+			fmt.Printf("[gateway] redis publish payment.received: %v\n", err)
+		}
 	}
 
 	writeSuccess(w, http.StatusOK, resp)

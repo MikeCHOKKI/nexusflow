@@ -25,7 +25,7 @@ func newRouter(clients *client.Clients, rdb *redis.Client) *mux.Router {
 	authH := handler.NewAuthHandler(clients)
 	catalogH := handler.NewCatalogHandler(clients)
 	orderH := handler.NewOrderHandler("service-order:50053")
-	paymentH := handler.NewPaymentHandler(clients)
+	paymentH := handler.NewPaymentHandler(clients, rdb)
 	dashboardH := handler.NewDashboardHandler(clients, clients.Conns, "service-order:50053")
 
 	// ── Routes ─────────────────────────────────────────────────

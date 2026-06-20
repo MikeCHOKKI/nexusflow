@@ -13,11 +13,13 @@ def order_confirmation(data: dict) -> str:
 
     items_html = ""
     for item in items:
+        qty = item.get('quantity', 1)
+        unit_price = item.get('unit_price', 0)
         items_html += (
             f"<tr>"
-            f"<td style='padding:8px;border-bottom:1px solid #eee;'>{item.get('name', '')}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:center;'>{item.get('qty', 1)}</td>"
-            f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:right;'>{item.get('price', '0.00')} €</td>"
+            f"<td style='padding:8px;border-bottom:1px solid #eee;'>{item.get('product_name', '')}</td>"
+            f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:center;'>{qty}</td>"
+            f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:right;'>{float(unit_price):,.0f} FCFA</td>"
             f"</tr>"
         )
 
@@ -41,7 +43,7 @@ def order_confirmation(data: dict) -> str:
         {items_html if items else "<tr><td colspan='3' style='padding:8px;text-align:center;color:#888;'>Aucun article</td></tr>"}
       </tbody>
     </table>
-    <p style="font-size:18px;font-weight:bold;text-align:right;margin:0;">Total : {total} €</p>
+    <p style="font-size:18px;font-weight:bold;text-align:right;margin:0;">Total : {float(total):,.0f} FCFA</p>
     <hr style="border:none;border-top:1px solid #dee2e6;margin:20px 0;">
     <p style="color:#6c757d;font-size:13px;">NexusFlow — Service client</p>
   </div>
@@ -97,7 +99,7 @@ def payment_receipt(data: dict) -> str:
     <p>Bonjour <strong>{customer_name}</strong>,</p>
     <p>Nous confirmons la réception de votre paiement pour la commande <strong>#{order_id}</strong>.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-      <tr><td style="padding:8px;color:#555;">Montant</td><td style="padding:8px;font-weight:bold;">{amount} €</td></tr>
+      <tr><td style="padding:8px;color:#555;">Montant</td><td style="padding:8px;font-weight:bold;">{float(amount):,.0f} FCFA</td></tr>
       <tr><td style="padding:8px;color:#555;">Mode de paiement</td><td style="padding:8px;">{payment_method}</td></tr>
       <tr><td style="padding:8px;color:#555;">Transaction</td><td style="padding:8px;font-family:monospace;font-size:13px;">{transaction_id}</td></tr>
     </table>

@@ -72,8 +72,8 @@ class OrderService
         try {
             // Insérer la commande
             $stmt = $this->db->prepare(
-                "INSERT INTO orders.orders (user_id, total_amount, currency, shipping_address)
-                 VALUES (:user_id, :total_amount, :currency, :shipping_address)
+                "INSERT INTO orders.orders (user_id, total_amount, currency, shipping_address, customer_email, customer_name)
+                 VALUES (:user_id, :total_amount, :currency, :shipping_address, :customer_email, :customer_name)
                  RETURNING id, created_at, updated_at"
             );
 
@@ -82,6 +82,8 @@ class OrderService
                 'total_amount'     => $totalAmount,
                 'currency'         => $currency,
                 'shipping_address' => $shippingAddress,
+                'customer_email'   => $customerEmail,
+                'customer_name'    => $customerName,
             ]);
 
             $order = $stmt->fetch();
@@ -108,8 +110,8 @@ class OrderService
 
             $this->db->commit();
 
-            // Publier événement
-            $this->pubSub->orderCreated($orderId, $userId, $customerEmail, $totalAmount, $currency, $customerName);
+            // Publier événement avec les articles
+            $this->pubSub->orderCreated($orderId, $userId, $customerEmail, $totalAmount, $currency, $orderItems, $customerName);
 
             return [
                 'id'               => $orderId,
@@ -182,6 +184,8 @@ class OrderService
             'status'           => $order['status'],
             'shipping_address' => $order['shipping_address'],
             'payment_id'       => $order['payment_id'],
+            'customer_email'   => $order['customer_email'] ?? '',
+            'customer_name'    => $order['customer_name'] ?? 'Client',
             'created_at'       => $order['created_at'],
             'updated_at'       => $order['updated_at'],
         ];
@@ -231,7 +235,8 @@ class OrderService
         $sql = "SELECT o.id, o.user_id,
                        CAST(o.total_amount AS DOUBLE PRECISION) AS total_amount,
                        o.currency, o.status::text, o.shipping_address,
-                       o.payment_id, o.created_at, o.updated_at
+                       o.payment_id, o.customer_email, o.customer_name,
+                       o.created_at, o.updated_at
                 FROM orders.orders o
                 $where
                 ORDER BY o.created_at DESC
@@ -298,9 +303,9 @@ class OrderService
             json_response(null, "Statut invalide : $status", 400);
         }
 
-        // Récupérer le statut actuel
+        // Récupérer le statut actuel + email client
         $stmt = $this->db->prepare(
-            "SELECT id, user_id, status::text FROM orders.orders WHERE id = :id"
+            "SELECT id, user_id, status::text, customer_email, customer_name FROM orders.orders WHERE id = :id"
         );
         $stmt->execute(['id' => $id]);
         $current = $stmt->fetch();
@@ -309,8 +314,10 @@ class OrderService
             return null;
         }
 
-        $oldStatus = $current['status'];
-        $userId    = $current['user_id'];
+        $oldStatus      = $current['status'];
+        $userId         = $current['user_id'];
+        $customerEmail  = $current['customer_email'] ?? '';
+        $customerName   = $current['customer_name'] ?? 'Client';
 
         // Mettre à jour
         $updateStmt = $this->db->prepare(
@@ -320,7 +327,8 @@ class OrderService
              RETURNING id, user_id,
                        CAST(total_amount AS DOUBLE PRECISION) AS total_amount,
                        currency, status::text, shipping_address,
-                       payment_id, created_at, updated_at"
+                       payment_id, customer_email, customer_name,
+                       created_at, updated_at"
         );
         $updateStmt->execute([
             'id'     => $id,
@@ -341,8 +349,8 @@ class OrderService
         $itemStmt->execute(['order_id' => $id]);
         $order['items'] = $itemStmt->fetchAll();
 
-        // Publier événement (customer_email inconnu pour l'instant)
-        $this->pubSub->orderStatusChanged($id, $userId, '', $oldStatus, $status);
+        // Publier événement avec les informations client
+        $this->pubSub->orderStatusChanged($id, $userId, $customerEmail, $customerName, $oldStatus, $status);
 
         return $order;
     }
