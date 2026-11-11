@@ -309,7 +309,7 @@ make proto
 
 ## 📄 Licence
 
-MIT — Fait avec OpenCode par [Mike E.S. Chokki](https://github.com/MikeCHOKKI)
+[MIT](LICENSE) — fait avec OpenCode par [Mike E.S. Chokki](https://github.com/MikeCHOKKI)
 
 <p align="center">
   <sub>Construisons des solutions qui comptent pour l'Afrique 🌍</sub>
